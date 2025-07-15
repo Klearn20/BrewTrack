@@ -1,5 +1,7 @@
 package com.Brew_Track.Cafe.Brew_Track.serviceImpl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -13,12 +15,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 import com.Brew_Track.Cafe.Brew_Track.JWT.CustomerUsersDetailsService;
+import com.Brew_Track.Cafe.Brew_Track.JWT.JwtFilter;
 import com.Brew_Track.Cafe.Brew_Track.JWT.JwtUtil;
 import com.Brew_Track.Cafe.Brew_Track.POJO.User;
 import com.Brew_Track.Cafe.Brew_Track.constents.CafeConstants;
 import com.Brew_Track.Cafe.Brew_Track.dao.UserDao;
 import com.Brew_Track.Cafe.Brew_Track.service.UserService;
 import com.Brew_Track.Cafe.Brew_Track.utils.CafeUtils;
+import com.Brew_Track.Cafe.Brew_Track.wrapper.UserWrapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +41,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     JwtUtil jwtUtil;
+
+    @Autowired
+    JwtFilter jwtFilter;
 
     @Override
     public ResponseEntity<String> signUp(Map<String, String> requestMap) {
@@ -82,9 +89,10 @@ public class UserServiceImpl implements UserService {
         log.info("Inside login");
         try {
             Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            requestMap.get("email"), requestMap.get("password")
-                    )
+                new UsernamePasswordAuthenticationToken(
+                    requestMap.get("email"),
+                    requestMap.get("password")
+                )
             );
 
             if (auth.isAuthenticated()) {
@@ -94,19 +102,33 @@ public class UserServiceImpl implements UserService {
                     return new ResponseEntity<>("{\"token\":\"" + token + "\"}", HttpStatus.OK);
                 } else {
                     return new ResponseEntity<>(
-                            "{\"message\":\"Wait for admin approval\"}",
-                            HttpStatus.BAD_REQUEST
+                        "{\"message\":\"Wait for admin approval\"}",
+                        HttpStatus.BAD_REQUEST
                     );
                 }
             }
-
         } catch (AuthenticationException ex) {
             log.error("Error in login: {}", ex.getMessage());
         }
 
         return new ResponseEntity<>(
-                "{\"message\":\"Bad Credentials.\"}",
-                HttpStatus.BAD_REQUEST
+            "{\"message\":\"Bad Credentials.\"}",
+            HttpStatus.BAD_REQUEST
         );
+    }
+
+    @Override
+    public ResponseEntity<List<UserWrapper>> getAllUser() {
+        try {
+            if (jwtFilter.isAdmin()) {
+                List<UserWrapper> userList = userDao.getAllUser();
+                return new ResponseEntity<>(userList, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.UNAUTHORIZED);
+            }
+        } catch (Exception ex) {
+            log.error("Exception in getAllUser: {}", ex.getMessage());
+        }
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

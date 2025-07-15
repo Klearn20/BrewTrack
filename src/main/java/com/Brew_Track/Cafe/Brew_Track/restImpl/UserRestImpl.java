@@ -1,5 +1,7 @@
 package com.Brew_Track.Cafe.Brew_Track.restImpl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,33 +13,44 @@ import com.Brew_Track.Cafe.Brew_Track.constents.CafeConstants;
 import com.Brew_Track.Cafe.Brew_Track.rest.UserRest;
 import com.Brew_Track.Cafe.Brew_Track.service.UserService;
 import com.Brew_Track.Cafe.Brew_Track.utils.CafeUtils;
+import com.Brew_Track.Cafe.Brew_Track.wrapper.UserWrapper;
 
+import lombok.extern.slf4j.Slf4j;
 
-
+@Slf4j
 @RestController
 public class UserRestImpl implements UserRest {
-    
-	@Autowired
-	UserService userService;
-	@Override
-	public ResponseEntity<String> signUp(Map<String, String> requestMap) {
-		// TODO Auto-generated method stub
-		try {
-			return userService.signUp(requestMap);
-		}catch (Exception ex) {
-		}
-		return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG ,HttpStatus.INTERNAL_SERVER_ERROR);
 
-	}
+    @Autowired
+    UserService userService;
 
-	@Override
-	public ResponseEntity<String> login(Map<String, String> requestMap) {	
-		// TODO Auto-generated method stub
-		try {
-			return userService.login(requestMap);
-		} catch (Exception ex) {
-		}
-		return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
-	}
+    @Override
+    public ResponseEntity<String> signUp(Map<String, String> requestMap) {
+        try {
+            return userService.signUp(requestMap);
+        } catch (Exception ex) {
+            log.error("Error in signUp: {}", ex.getMessage(), ex);
+        }
+        return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
+    @Override
+    public ResponseEntity<String> login(Map<String, String> requestMap) {
+        try {
+            return userService.login(requestMap);
+        } catch (Exception ex) {
+            log.error("Error in login: {}", ex.getMessage(), ex);
+        }
+        return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<List<UserWrapper>> getAllUser() {
+        try {
+            return userService.getAllUser();
+        } catch (Exception ex) {
+            log.error("Error in getAllUser: {}", ex.getMessage(), ex);
+        }
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR); // ✅ FIXED TYPE
+    }
 }
