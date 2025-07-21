@@ -18,6 +18,10 @@ import lombok.Data;
 
 @NamedQuery(name = "User.getAllUser", query = "select new com.Brew_Track.Cafe.Brew_Track.wrapper.UserWrapper(u.id, u.name, u.email, u.contactNumber, u.status) from User u")
 
+@NamedQuery(name = "User.updateUser", query = "update User u set u.status =:status where u.id =:id")
+
+@NamedQuery(name = "User.getAllAdmin", query = "select u.email from User u where u.role = 'admin'")
+
 @Data
 @Entity
 @DynamicUpdate

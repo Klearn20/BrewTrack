@@ -42,6 +42,9 @@ public class JwtFilter extends OncePerRequestFilter {
                 token = authorizationHeader.substring(7);
                 userName = jwtUtil.extractUsername(token);
                 claims = jwtUtil.extractAllClaims(token);
+
+                System.out.println("JWT claims: " + claims);
+                System.out.println("Extracted username: " + userName);
             }
 
             if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -67,4 +70,9 @@ public class JwtFilter extends OncePerRequestFilter {
     public String getCurrentUser(){
         return userName;
     }
+
+    public Claims getClaims() {
+    return claims;
+}
+
 }
