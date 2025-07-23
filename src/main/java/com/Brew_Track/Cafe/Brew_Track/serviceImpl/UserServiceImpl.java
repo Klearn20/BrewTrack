@@ -213,6 +213,7 @@ import com.google.common.base.Strings;
     }
         
     @Override
+        @SuppressWarnings("UseSpecificCatch")
     public ResponseEntity<String> forgotPassword(Map<String, String> requestMap) {
         try {
             User user = userDao.findByEmail(requestMap.get("email"));
@@ -226,6 +227,6 @@ import com.google.common.base.Strings;
         return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     
-    }
+}
     
     
