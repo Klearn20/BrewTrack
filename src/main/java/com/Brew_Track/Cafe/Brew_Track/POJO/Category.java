@@ -14,7 +14,11 @@ import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 import lombok.Data;
 
-@NamedQuery(name = "Category.getAllCategory", query = "SELECT c FROM Category c")
+@NamedQuery(
+    name = "Category.getAllCategory",
+    query = "SELECT c FROM Category c WHERE c.id IN (SELECT p.category.id FROM Product p WHERE p.status='true')"
+)
+
 
 @Data
 @Entity
