@@ -1,7 +1,13 @@
 package com.Brew_Track.Cafe.Brew_Track.serviceImpl;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.json.JSONArray;
@@ -44,7 +50,6 @@ public class BillServiceImpl implements BillService {
     @Override
     public ResponseEntity<String> generateReport(Map<String, Object> requestMap) {
         log.info("Inside generateReport");
-
         try {
             String fileName;
 
@@ -58,9 +63,9 @@ public class BillServiceImpl implements BillService {
                 }
 
                 String data = "Name: " + requestMap.get("name") + "\n" +
-                        "Email: " + requestMap.get("email") + "\n" +
-                        "Contact Number: " + requestMap.get("contactNumber") + "\n" +
-                        "Payment Method: " + requestMap.get("paymentMethod");
+                              "Email: " + requestMap.get("email") + "\n" +
+                              "Contact Number: " + requestMap.get("contactNumber") + "\n" +
+                              "Payment Method: " + requestMap.get("paymentMethod");
 
                 Document document = new Document();
                 PdfWriter.getInstance(document, new FileOutputStream(CafeConstants.STORE_LOCATION + "\\" + fileName + ".pdf"));
@@ -84,19 +89,17 @@ public class BillServiceImpl implements BillService {
                 }
                 document.add(table);
 
-                Paragraph footer = new Paragraph("Total: " + requestMap.get("totalAmount") + "\nThank you for visiting. Please visit again!!",
-                        getFont("Data"));
+                Paragraph footer = new Paragraph("Total: " + requestMap.get("totalAmount") +
+                        "\nThank you for visiting. Please visit again!!", getFont("Data"));
                 document.add(footer);
                 document.close();
+
                 return new ResponseEntity<>("{\"uuid\":\"" + fileName + "\"}", HttpStatus.OK);
             }
-
             return CafeUtils.getResponseEntity("Required data not found", HttpStatus.BAD_REQUEST);
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-
         return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -127,7 +130,6 @@ public class BillServiceImpl implements BillService {
     }
 
     private void setRectangleInPdf(Document document) throws DocumentException {
-        log.info("Inside setRectanglePdf");
         Rectangle rectangle = new Rectangle(577, 825, 18, 15);
         rectangle.enableBorderSide(1);
         rectangle.enableBorderSide(2);
@@ -139,23 +141,22 @@ public class BillServiceImpl implements BillService {
     }
 
     private Font getFont(String type) {
-        log.info("Inside getFont");
-        switch (type) {
-            case "Header":
+        return switch (type) {
+            case "Header" -> {
                 Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLDOBLIQUE, 18, BaseColor.BLACK);
                 headerFont.setStyle(Font.BOLD);
-                return headerFont;
-            case "Data":
+                yield headerFont;
+            }
+            case "Data" -> {
                 Font dataFont = FontFactory.getFont(FontFactory.TIMES_ROMAN, 11, BaseColor.BLACK);
                 dataFont.setStyle(Font.BOLD);
-                return dataFont;
-            default:
-                return new Font();
-        }
+                yield dataFont;
+            }
+            default -> new Font();
+        };
     }
 
     private void addTableHeader(PdfPTable table) {
-        log.info("Inside addTableHeader");
         Stream.of("Name", "Category", "Quantity", "Price", "Sub Total")
                 .forEach(columnTitle -> {
                     PdfPCell header = new PdfPCell();
@@ -169,11 +170,65 @@ public class BillServiceImpl implements BillService {
     }
 
     private void addRows(PdfPTable table, Map<String, Object> data) {
-        log.info("Inside addRows");
         table.addCell((String) data.get("name"));
         table.addCell((String) data.get("category"));
         table.addCell((String) data.get("quantity"));
-        table.addCell(Double.toString((Double) data.get("price")));
-        table.addCell(Double.toString((Double) data.get("total")));
+        table.addCell(data.get("price").toString());
+        table.addCell(data.get("total").toString());
     }
+
+    @Override
+    public ResponseEntity<List<Bill>> getBills() {
+        List<Bill> list = jwtFilter.isAdmin() ? billDao.getAllBills() : billDao.getBillByUserName(jwtFilter.getCurrentUser());
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<byte[]> getPdf(Map<String, Object> requestMap) {
+        log.info("Inside Pdf : requestMap {}", requestMap);
+        try {
+            byte[] byteArray = new byte[0];
+            if (requestMap.containsKey("uuid") && validateRequestMap(requestMap)) {
+                String filePath = CafeConstants.STORE_LOCATION + "\\" + requestMap.get("uuid") + ".pdf";
+                if (CafeUtils.isFileExist(filePath)) {
+                    byteArray = getByteArray(filePath);
+                } else {
+                    requestMap.put("isGenerate", false);
+                    generateReport(requestMap);
+                    byteArray = getByteArray(filePath);
+                }
+                return new ResponseEntity<>(byteArray, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(byteArray, HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(("{\"message\":\"" + CafeConstants.SOMETHING_WENT_WRONG + "\"}").getBytes(StandardCharsets.UTF_8));
+    }
+
+    private byte[] getByteArray(String filePath) throws IOException {
+        File file = new File(filePath);
+        try (FileInputStream fis = new FileInputStream(file)) {
+            return fis.readAllBytes();
+        }
+    }
+
+    @Override
+    public ResponseEntity<String> deleteBill(Integer id) {
+        try {
+        Optional optional = billDao.findById(id);
+        if(!optional.isEmpty()) {
+           billDao.deleteById(id); 
+            return CafeUtils.getResponseEntity("Bill deleted successfully", HttpStatus.OK);
+        }
+        return CafeUtils.getResponseEntity("Bill Deleted Successfully", HttpStatus.OK);
+        } catch (Exception ex) {
+
+        }
+        return CafeUtils.getResponseEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
 }
